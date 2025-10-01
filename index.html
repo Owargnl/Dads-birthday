@@ -8,7 +8,7 @@
     :root{
       --confetti-colors: #e63946,#f4d35e,#2a9d8f,#457b9d,#9b5de5,#ff7b00,#ff69b4;
       --confetti-count: 120;
-      --sky: #87CEEB; /* sky blue */
+      --sky: #87CEEB;
     }
 
     html,body{
@@ -16,7 +16,7 @@
       margin:0;
       background:var(--sky);
       font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
-      overflow:hidden; /* hide scrollbars while confetti falls */
+      overflow:hidden;
     }
 
     .center {
@@ -48,7 +48,6 @@
 
     .confetti{
       position:absolute;
-      top:-10vh;
       will-change:transform,opacity;
       border-radius:2px;
       opacity:0.95;
@@ -57,17 +56,12 @@
 
     @keyframes fall {
       0%{ transform: translateY(-10vh) rotateZ(var(--rz,0deg)); opacity:1 }
-      90%{ opacity:1 }
-      100%{ transform: translateY(110vh) rotateZ(calc(var(--rz,0deg) + 360deg)); opacity:0.9 }
+      100%{ transform: translateY(110vh) rotateZ(calc(var(--rz,0deg) + 720deg)); opacity:1 }
     }
 
     @keyframes spinZ {
       from{ transform: rotateZ(0deg); }
       to{ transform: rotateZ(360deg); }
-    }
-
-    @media (prefers-reduced-motion: reduce){
-      .confetti{ animation:none !important; }
     }
   </style>
 </head>
@@ -84,10 +78,13 @@
       const colors = getComputedStyle(document.documentElement).getPropertyValue('--confetti-colors').split(',').map(s=>s.trim()).filter(Boolean);
       const count = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--confetti-count')) || 120;
       const wrap = document.querySelector('.confetti-wrap');
+      let running = true;
 
       function rand(min,max){ return Math.random()*(max-min)+min }
 
-      for(let i=0;i<count;i++){
+      function createConfetti(){
+        if(!running) return;
+
         const el = document.createElement('div');
         el.className = 'confetti';
 
@@ -99,21 +96,38 @@
         el.style.background = colors[Math.floor(rand(0,colors.length))] || '#f4d35e';
 
         el.style.left = Math.round(rand(0,100)) + '%';
+        el.style.top = '-10vh';
 
         const rz = Math.round(rand(0,360));
         el.style.setProperty('--rz', rz + 'deg');
 
-        // Slower animations
-        const delay = rand(0, -30);
-        const duration = rand(12,22); // much slower fall
+        const duration = rand(12,22);
+        const spinDuration = rand(6,12);
 
-        el.style.animation = `fall ${duration}s linear ${delay}s infinite, spinZ ${rand(6,12)}s linear ${rand(0,2)}s infinite`;
-
-        el.style.opacity = rand(0.8,1).toFixed(2);
-        el.style.transform = `rotateZ(${rz}deg)`;
+        el.style.animation = `fall ${duration}s linear 0s forwards, spinZ ${spinDuration}s linear infinite`;
 
         wrap.appendChild(el);
+
+        // Remove element when finished falling to avoid DOM bloat
+        setTimeout(()=>{
+          if(el.parentNode){ el.parentNode.removeChild(el); }
+        }, duration*1000 + 200);
       }
+
+      // continuously spawn confetti
+      const interval = setInterval(()=>{
+        if(running){
+          createConfetti();
+        }
+      }, 200);
+
+      // Stop when pressing "s"
+      window.addEventListener('keydown',(e)=>{
+        if(e.key.toLowerCase() === 's'){
+          running = false;
+          clearInterval(interval);
+        }
+      });
 
     })();
   </script>
