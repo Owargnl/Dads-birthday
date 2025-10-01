@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>HAPPY BIRTHDAY DAD</title>
+  <style>
+    :root{
+      --confetti-colors: #e63946,#f4d35e,#2a9d8f,#457b9d,#9b5de5,#ff7b00,#ff69b4;
+      --confetti-count: 120;
+      --sky: #87CEEB; /* sky blue */
+    }
+
+    html,body{
+      height:100%;
+      margin:0;
+      background:var(--sky);
+      font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
+      -webkit-font-smoothing:antialiased;
+      -moz-osx-font-smoothing:grayscale;
+      overflow:hidden; /* hide scrollbars while confetti falls */
+    }
+
+    /* Centered bold text with newline */
+    .center {
+      position:relative;
+      z-index:2; /* above confetti */
+      height:100%;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      text-align:center;
+      pointer-events:none;
+    }
+
+    h1{
+      margin:0;
+      font-weight:800;
+      font-size:clamp(32px, 8vw, 120px);
+      line-height:0.95;
+      color:#023047; /* deep blue for contrast */
+      text-shadow: 0 2px 0 rgba(255,255,255,0.15);
+    }
+
+    /* Confetti container covers whole viewport */
+    .confetti-wrap{
+      position:fixed;
+      inset:0;
+      z-index:1;
+      pointer-events:none;
+      overflow:hidden;
+    }
+
+    .confetti{
+      position:absolute;
+      top:-10vh; /* start above viewport */
+      will-change:transform,opacity;
+      border-radius:2px;
+      opacity:0.95;
+      transform-origin:center;
+    }
+
+    /* Fall animation moves confetti down beyond the bottom of viewport */
+    @keyframes fall {
+      0%{ transform: translateY(-10vh) rotateZ(var(--rz,0deg)); opacity:1 }
+      90%{ opacity:1 }
+      100%{ transform: translateY(110vh) rotateZ(calc(var(--rz,0deg) + 360deg)); opacity:0.9 }
+    }
+
+    /* Spin on Z-axis for a continuous turning effect */
+    @keyframes spinZ {
+      from{ transform: rotateZ(0deg); }
+      to{ transform: rotateZ(360deg); }
+    }
+
+    /* Small visual tweak for accessibility: prefer-reduced-motion support */
+    @media (prefers-reduced-motion: reduce){
+      .confetti{ animation:none !important; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="confetti-wrap" aria-hidden="true"></div>
+
+  <div class="center">
+    <h1>HAPPY BIRTHDAY<br>DAD.</h1>
+  </div>
+
+  <script>
+    (function(){
+      const colors = getComputedStyle(document.documentElement).getPropertyValue('--confetti-colors').split(',').map(s=>s.trim()).filter(Boolean);
+      const count = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--confetti-count')) || 120;
+      const wrap = document.querySelector('.confetti-wrap');
+      const vw = Math.max(document.documentElement.clientWidth || 0, window.innerWidth || 0);
+      const vh = Math.max(document.documentElement.clientHeight || 0, window.innerHeight || 0);
+
+      function rand(min,max){ return Math.random()*(max-min)+min }
+
+      // create confetti pieces
+      for(let i=0;i<count;i++){
+        const el = document.createElement('div');
+        el.className = 'confetti';
+
+        // size: small rectangles
+        const w = Math.round(rand(6,14)); // width px
+        const h = Math.round(rand(12,28)); // height px
+        el.style.width = w + 'px';
+        el.style.height = h + 'px';
+
+        // color
+        el.style.background = colors[Math.floor(rand(0,colors.length))] || '#f4d35e';
+
+        // horizontal position
+        el.style.left = Math.round(rand(0,100)) + '%';
+
+        // random rotation z-base
+        const rz = Math.round(rand(0,360));
+        el.style.setProperty('--rz', rz + 'deg');
+
+        // random delay & duration so they stagger
+        const delay = rand(0, -20); // negative delays to make some already falling
+        const duration = rand(6,14); // seconds
+
+        // horizontal sway using CSS translateX animation via inline style using animation shorthand
+        // We'll compose by using fall (translateY + rotateZ) and a subtle infinite spinZ with different duration
+
+        el.style.animation = `fall ${duration}s linear ${delay}s infinite, spinZ ${rand(2,6)}s linear ${rand(0,2)}s infinite`;
+
+        // slight opacity variation
+        el.style.opacity = rand(0.8,1).toFixed(2);
+
+        // small tilt to make them look varied (use rotateZ initial)
+        el.style.transform = `rotateZ(${rz}deg)`;
+
+        // random horizontal drift using CSS variable + transform in keyframes is complex; instead apply a small CSS transition
+        // We'll create an additional subtle horizontal oscillation with JS using Web Animations API for each element for performance
+        wrap.appendChild(el);
+
+        // Add a lightweight horizontal oscillation using WAAPI
+        try{
+          const drift = rand(30,120); // px total drift
+          const timing = {duration: (duration*1000), iterations: Infinity, easing:'linear'};
+          const keyframes = [
+            { transform: `translateX(0px) rotateZ(${rz}deg)` },
+            { transform: `translateX(${drift}px) rotateZ(${rz+180}deg)` },
+            { transform: `translateX(0px) rotateZ(${rz+360}deg)` }
+          ];
+          // start animation slightly offset for variety
+          const anim = el.animate(keyframes, Object.assign({}, timing, {delay: delay*1000}));
+          // keep pointer-events none
+          el.style.pointerEvents = 'none';
+        }catch(e){
+          // fallback: do nothing if WAAPI not available
+        }
+      }
+
+      // keep elements within viewport on resize
+      window.addEventListener('resize', ()=>{
+        // nothing needed — confetti positioned in % so it's responsive
+      });
+
+    })();
+  </script>
+</body>
+</html>
